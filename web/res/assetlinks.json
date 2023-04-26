@@ -1,0 +1,23 @@
+[{
+  "relation": [
+    "delegate_permission/common.handle_all_urls",
+    "delegate_permission/common.get_login_creds"
+  ],
+  "target": {
+    "namespace": "web",
+    "site": "https://authfirpdemo.ddns.net"
+  }
+ },
+ {
+   "relation": [
+     "delegate_permission/common.handle_all_urls",
+     "delegate_permission/common.get_login_creds"
+   ],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "com.authentrend.example.rpapp",
+    "sha256_cert_fingerprints": [
+      "E5:BC:96:7A:A9:CF:65:0D:90:93:39:62:48:A2:76:7C:DD:B1:D0:E7:17:7C:44:F5:21:28:26:83:E5:8C:59:F6"
+    ]
+  }
+ }]

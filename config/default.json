@@ -1,0 +1,6 @@
+{
+  "certPath": "/etc/letsencrypt/live/authfirpdemo.ddns.net/fullchain.pem",
+  "keyPath": "/etc/letsencrypt/live/authfirpdemo.ddns.net/privkey.pem",
+  "accessPoint": "https://authfistage.authentrend.com/YXV0aGZpcnBkZW1vLmRkbnMubmV0",
+  "apiKey": "FYXjP5-bTNFTQiW6MFidv-ZEJd9Qk-_JZob6bqNuPSM"
+}

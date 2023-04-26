@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Relying Party Example</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    .wrapper {
+      height: 80vh;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-direction: column;
+    }
+    .loading {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      align-items: stretch;
+      justify-content: center;
+      opacity: 0.7;
+      background-color: black;
+    }
+    p.loading_text {
+      margin-top: 30vh;
+      padding: 5%;
+      color: white;
+      font-size: 8vw;
+      text-align: center;
+      background-color: red;
+    }
+    button.positive {
+      border-radius: 25px;
+      border: none;
+      width: 70vw;
+      margin-top: 30vh;
+      padding:10%;
+      color:white;
+      font-size:8vw;
+      text-align: center;
+      text-decoration: none;
+      display: inline-block;
+      background-color: DodgerBlue;
+      -webkit-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
+    }
+    button.positive:active {
+      background-color: DeepSkyBlue;
+    }
+    button.negative {
+      border-radius: 25px;
+      border: none;
+      width: 70vw;
+      padding:5% 10%;
+      color:white;
+      font-size:8vw;
+      text-align: center;
+      text-decoration: none;
+      display: inline-block;
+      background-color: DarkRed;
+      -webkit-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
+    }
+    button.negative:active {
+      background-color: FireBrick;
+    }
+  </style>
+</head>
+
+<body>
+  <h1 style="text-align:center;font-size:4vw;">Relying Party Example for AT.AuthFi</h1>
+  <div id="content" class="wrapper">
+  </div>
+
+  <div id="auth_content" style="display:none">
+    <button id="auth_btn" class="positive" style="text-align:center;" onclick="authBtnClick()"></button>
+    <button id="cancel_btn" class="negative" style="text-align:center;" onclick="cancelBtnClick()">Cancel</button>
+  </div>
+
+  <div id="error_content" style="display:none">
+    <p id="err_msg"></p>
+  </div>
+
+  <div id="loading_content" class="loading" style="display:none">
+    <p class="loading_text">Loading...</p>
+  </div>
+
+  <script src="js/base64.js" type="text/javascript"></script>
+  <script src="js/tools.js" type="text/javascript"></script>
+  <script>
+    function isEmpty(obj) {
+      return (obj == null || obj === '')
+    }
+
+    function redirect(uri) {
+      console.log("redirect to " + uri)
+      window.location.replace(uri)
+    }
+
+    function respond(obj) {
+      const json = JSON.stringify(obj)
+      const resp = encodeURIComponent(window.btoa(json))
+      let uri = rscheme + "://" + method + "?resp=" + resp
+      redirect(uri)
+    }
+
+    function respondFailure(msg) {
+      respond({'status': 'fail','msg': msg})
+    }
+
+    function respondSuccess(msg) {
+      respond({'status': 'ok','msg': msg})
+    }
+
+    function showErrMsg(msg) {
+      let content = document.getElementById("content")
+      content.innerHTML = document.getElementById("error_content").innerHTML
+      let errMsg = document.querySelector("#content").querySelector("#err_msg")
+      errMsg.innerHTML = msg
+    }
+  </script>
+  <script>
+    const METHOD_SIGN_UP = 'signup'
+    const METHOD_SIGN_IN = 'signin'
+    const METHOD_REGISTER_KEY = 'registerkey'
+    var method
+    var username
+    var rscheme
+    var token
+
+    function loadContent() {
+      const queryString = window.location.search
+      if (isEmpty(queryString)) {
+        showErrMsg("Parameter not found")
+        return
+      }
+      const params = new URLSearchParams(queryString)
+      method = params.get("m")
+      username = params.get("u")
+      rscheme = params.get("r")
+      token = params.get("t")
+      if (isEmpty(method) || isEmpty(rscheme) ||
+          (method == METHOD_SIGN_UP && isEmpty(username)) ||
+          (method == METHOD_REGISTER_KEY && isEmpty(token))) {
+        showErrMsg("Parameter not found")
+        return
+      }
+      console.log("method: " + method)
+      console.log("username: " + username)
+      console.log("rscheme: " + rscheme)
+      console.log("token: " + token)
+
+      let content = document.getElementById("content")
+      content.innerHTML = document.getElementById("auth_content").innerHTML
+      let authBtn = document.querySelector("#content").querySelector("#auth_btn")
+      if (method == METHOD_SIGN_UP) {
+        authBtn.innerText = "Sign Up"
+      }
+      else if (method == METHOD_SIGN_IN) {
+        authBtn.innerText = "Sign In"
+      }
+      else if (method == METHOD_REGISTER_KEY) {
+        authBtn.innerText = "Register"
+      }
+      else {
+        respondFailure("Invalid method")
+      }
+    }
+
+    function showLoadingIndicator() {
+      let loading = document.querySelector("#loading_content")
+      loading.style.display = 'inline'
+    }
+
+    function hideLoadingIndicator() {
+      let loading = document.querySelector("#loading_content")
+      loading.style.display = 'none'
+    }
+
+    async function login() {
+      let isSignUp = (method == METHOD_SIGN_UP)
+      showLoadingIndicator()
+      let url = window.location.protocol + "//" + window.location.hostname
+      url += isSignUp ? "/signup" : "/signin"
+      url += "?u=" + encodeURIComponent(username)
+      if (isSignUp) { url += "&at=" + "platform"}
+      let response = await fetch(url)
+      response = await response.json()
+      console.log(JSON.stringify(response))
+      if (response.status != "ok") {
+        hideLoadingIndicator()
+        respondFailure(response.msg)
+        return
+      }
+      let options = null
+      if (response.msg != null) {
+        options = response.msg.options
+      }
+
+      let data = {username: username}
+      if (options != null) {
+        try {
+          const credential = isSignUp
+            ? await navigator.credentials.create({publicKey: preformatMakeCredReq(options)})
+            : await navigator.credentials.get({publicKey: preformatGetAssertReq(options)})
+          data.credential = publicKeyCredentialToJSON(credential)
+        } catch(error) {
+          hideLoadingIndicator()
+          respondFailure(error.message)
+          return
+        }
+      }
+      url = window.location.protocol + "//" + window.location.hostname
+      url += isSignUp ? "/signup" : "/signin"
+      response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+      })
+      response = await response.json()
+      console.log(JSON.stringify(response))
+      hideLoadingIndicator()
+      if (response.status != "ok") {
+        respondFailure(response.msg)
+        return
+      }
+      token = response.msg.token
+      if (isEmpty(token)) {
+        respondFailure("Unknown error")
+        return
+      }
+      respondSuccess({token: token})
+    }
+
+    async function registerKey() {
+      showLoadingIndicator()
+      let url = window.location.protocol + "//" + window.location.hostname + "/registerkey"
+      url += "?at=" + "platform"
+      let response = await fetch(url, {
+        method: 'GET',
+        headers: {'Authorization': 'Bearer ' + token},
+      })
+      response = await response.json()
+      console.log(JSON.stringify(response))
+      if (response.status != "ok") {
+        hideLoadingIndicator()
+        respondFailure(response.msg)
+        return
+      }
+      if (response.msg == null || response.msg.options == null) {
+        hideLoadingIndicator()
+        respondFailure("Unknown error")
+        return
+      }
+      let data = {}
+      const options = response.msg.options
+      try {
+        const credential = await navigator.credentials.create({publicKey: preformatMakeCredReq(options)})
+        data.credential = publicKeyCredentialToJSON(credential)
+      } catch(error) {
+        hideLoadingIndicator()
+        respondFailure(error.message)
+        return
+      }
+
+      url = window.location.protocol + "//" + window.location.hostname + "/registerkey"
+      response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer ' + token,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+      })
+      response = await response.json()
+      console.log(JSON.stringify(response))
+      hideLoadingIndicator()
+      if (response.status != "ok") {
+        respondFailure(response.msg)
+        return
+      }
+      respondSuccess()
+    }
+
+    function authBtnClick() {
+      if (method == METHOD_SIGN_UP || method == METHOD_SIGN_IN) {
+        login()
+      }
+      else if (method == METHOD_REGISTER_KEY) {
+        registerKey()
+      }
+    }
+
+    function cancelBtnClick() {
+      respondFailure("User cancelled")
+    }
+
+    window.onload = loadContent()
+  </script>
+</body>
+</html>

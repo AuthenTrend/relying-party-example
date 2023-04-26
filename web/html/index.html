@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Relying Party Example</title>
+
+  <style>
+    label.clickable:hover {
+     background:DodgerBlue;
+     cursor:pointer;
+    }
+    label.highlight {
+      background:DodgerBlue;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Relying Party Example for AT.AuthFi</h1>
+  <div id="content">
+  </div>
+
+  <div id="login_content" style="display:none">
+    <label id="signup_lbl" class="clickable" onclick="signUp()">Sign Up</label>
+    <label>&nbsp;&nbsp;|&nbsp;&nbsp;</label>
+    <label id="signin_lbl" class="clickable" onclick="signIn()">Sign In</label>
+    <br><br>
+    <label for="username">Username: </label><input id="username_ipt" type="text" name="username">
+    <br><br>
+    <input id="use_pw_checkbox" type="checkbox" name="use_password" onclick="checkUsingPassword()"><label for="use_password">Use password</label>
+    <br><br>
+    <div id="password_div" style="display:none">
+      <label for="password">Password: </label><input id="password_ipt" type="text" name="password">
+      <br><br>
+      <div id="two_fa_div" style="display:none">
+        <input id="two_fa_checkbox" type="checkbox" name="two_fa" onclick="check2fa()"><label for="two_fa">2FA</label>
+        <br><br>
+      </div>
+    </div>
+    <button id="login_btn" onclick="login()"></button>
+  </div>
+
+  <div id="loggedin_content" style="display:none">
+    <h3>User Info</h3>
+    <p id="userinfo_text" style="border-style:solid;padding: 10px"></p>
+    <button id="register_btn" onclick="registerKey()">Register New FIDO2 Key</button>
+    <button id="logout_btn" onclick="logout()">Log Out</button>
+  </div>
+
+  <script src="js/base64.js" type="text/javascript"></script>
+  <script src="js/tools.js" type="text/javascript"></script>
+  <script>
+    async function digestMessage(message) {
+      const encoder = new TextEncoder()
+      const data = encoder.encode(message)
+      const hash = await crypto.subtle.digest("SHA-256", data)
+      return hash
+    }
+
+    function validateEmail(email) {
+      return email.match(/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/)
+    }
+  </script>
+  <script>
+    var isLoggedIn = false
+    var isSignUp = false
+    var isUsingPassword = false
+    var is2faEnabled = false
+
+    function checkUsingPassword() {
+      let password_div = document.querySelector("#content").querySelector("#password_div")
+      let two_fa_div = document.querySelector("#content").querySelector("#two_fa_div")
+      let checkbox = document.querySelector("#content").querySelector("#use_pw_checkbox")
+      isUsingPassword = checkbox.checked
+      password_div.style.display = isUsingPassword ? "inline" : "none"
+      two_fa_div.style.display = !isSignUp ? "inline" : "none"
+    }
+
+    function check2fa() {
+      let checkbox = document.querySelector("#content").querySelector("#two_fa_checkbox")
+      is2faEnabled = checkbox.checked
+    }
+
+    function loadContent() {
+      let content = document.getElementById("content")
+      const token = sessionStorage.getItem("session_token")
+      if (token != null && token !== '') { isLoggedIn = true }
+      if (isLoggedIn) {
+        content.innerHTML = document.getElementById("loggedin_content").innerHTML
+        let userinfoText = document.querySelector("#content").querySelector("#userinfo_text")
+        userinfoText.innerText = ""
+        const url = window.location.protocol + "//" + window.location.hostname + "/userinfo"
+        fetch(url, {
+          method: 'GET',
+          headers: {'Authorization': 'Bearer ' + token},
+        }).then(response => response.json()).then(function(response) {
+          console.log(JSON.stringify(response))
+          userinfoText.innerText = JSON.stringify(response)
+        })
+      }
+      else {
+        content.innerHTML = document.getElementById("login_content").innerHTML
+        let signupLabel = document.querySelector("#content").querySelector("#signup_lbl")
+        let signinLabel = document.querySelector("#content").querySelector("#signin_lbl")
+        let button = document.querySelector("#content").querySelector("#login_btn")
+        if (isSignUp) {
+          signupLabel.classList.add('highlight')
+          signinLabel.classList.remove('highlight')
+          button.innerText = "Sign Up"
+        }
+        else {
+          signupLabel.classList.remove('highlight')
+          signinLabel.classList.add('highlight')
+          button.innerText = "Sign In"
+        }
+        checkUsingPassword()
+      }
+    }
+
+    function showLoadingIndicator() {
+      // TODO
+    }
+
+    function hideLoadingIndicator() {
+      // TODO
+    }
+
+    function signUp() {
+      isSignUp = true
+      loadContent()
+    }
+
+    function signIn() {
+      isSignUp = false
+      loadContent()
+    }
+
+    async function login() {
+      const username = document.querySelector("#content").querySelector("#username_ipt").value.trim()
+      if ((isSignUp && username == "") || (isUsingPassword && username == "")) {
+        alert("Username cannot be empty!")
+        return
+      }
+      if (username != "" && !validateEmail(username)) {
+        alert("Username must be email format")
+        return
+      }
+      showLoadingIndicator()
+      let url = window.location.protocol + "//" + window.location.hostname
+      url += isSignUp ? "/signup" : "/signin"
+      url += "?u=" + encodeURIComponent(username)
+      url += "&p=" + (isUsingPassword ? "1" : "0")
+      if (isSignUp) { url += "&at=" + "cross-platform"}
+      if (!isSignUp && isUsingPassword && is2faEnabled) { url += "&t=1" }
+      let response = await fetch(url)
+      response = await response.json()
+      console.log(JSON.stringify(response))
+      if (response.status != "ok") {
+        hideLoadingIndicator()
+        alert(response.msg)
+        return
+      }
+      let options = null
+      if (response.msg != null) {
+        options = response.msg.options
+      }
+
+      let data = {username: username}
+      if (isUsingPassword) {
+        const password = document.querySelector("#content").querySelector("#password_ipt").value
+        if (password == "" || password == null) {
+          hideLoadingIndicator()
+          alert("Password cannot be empty!")
+          return
+        }
+        const digest = await digestMessage(password)
+        const encodedPassword = btoa(String.fromCharCode.apply(null, new Uint8Array(digest)))
+        data.password = encodedPassword
+      }
+      if (options != null) {
+        try {
+          const credential = isSignUp
+            ? await navigator.credentials.create({publicKey: preformatMakeCredReq(options)})
+            : await navigator.credentials.get({publicKey: preformatGetAssertReq(options)})
+          data.credential = publicKeyCredentialToJSON(credential)
+        } catch(error) {
+          hideLoadingIndicator()
+          alert(error)
+          return
+        }
+      }
+      url = window.location.protocol + "//" + window.location.hostname
+      url += isSignUp ? "/signup" : "/signin"
+      response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+      })
+      response = await response.json()
+      console.log(JSON.stringify(response))
+      hideLoadingIndicator()
+      if (response.status != "ok") {
+        alert(response.msg)
+        return
+      }
+      const token = response.msg.token
+      if (token == null || token == "") {
+        alert("Unknown error")
+        return
+      }
+      sessionStorage.setItem("session_token", token)
+      isLoggedIn = true
+      loadContent()
+    }
+
+    function logout() {
+      sessionStorage.removeItem("session_token")
+      //sessionStorage.clear()
+      isLoggedIn = false
+      loadContent()
+    }
+
+    async function registerKey() {
+      const token = sessionStorage.getItem("session_token")
+      if (token == null) {
+        alert("Please sign in first")
+        return
+      }
+      showLoadingIndicator()
+      let url = window.location.protocol + "//" + window.location.hostname + "/registerkey"
+      url += "?at=" + "cross-platform"
+      let response = await fetch(url, {
+        method: 'GET',
+        headers: {'Authorization': 'Bearer ' + token},
+      })
+      response = await response.json()
+      console.log(JSON.stringify(response))
+      if (response.status != "ok") {
+        hideLoadingIndicator()
+        alert(response.msg)
+        return
+      }
+      if (response.msg == null || response.msg.options == null) {
+        hideLoadingIndicator()
+        alert("Unknown error")
+        return
+      }
+      let data = {}
+      const options = response.msg.options
+      try {
+        const credential = await navigator.credentials.create({publicKey: preformatMakeCredReq(options)})
+        data.credential = publicKeyCredentialToJSON(credential)
+      } catch(error) {
+        hideLoadingIndicator()
+        alert(error)
+        return
+      }
+
+      url = window.location.protocol + "//" + window.location.hostname + "/registerkey"
+      response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer ' + token,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+      })
+      response = await response.json()
+      console.log(JSON.stringify(response))
+      hideLoadingIndicator()
+      if (response.status != "ok") {
+        alert(response.msg)
+        return
+      }
+      loadContent()
+    }
+
+    window.onload = loadContent()
+  </script>
+</body>
+</html>
