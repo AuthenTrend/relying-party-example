@@ -9,11 +9,20 @@ This example supports that users register an account with password, FIDO2 Key or
 ## Installation
     npm install
 
-## Configurations (config/default.json)
-- certPath (path of certificate)
-- keyPath (path of private key)
-- accessPoint (access point of AT.AuthFi)
-- apiKey (API key of AT.AuthFi)
+## Configurations
+### config/default.json
+- `certPath`: The path of SSL certificate.
+- `keyPath`: The path of certificate's private key.
+- `accessPoint`: The access point for using [AT.AuthFi](https://authentrend.com/at-authfi/).
+- `apiKey`: The API key for using [AT.AuthFi](https://authentrend.com/at-authfi/).
+
+### web/res/asselinks.json
+- `site`: The website's URL.
+- `package_name`: The package name declared in the app's manifest.
+- `sha256_cert_fingerprints`: The SHA256 fingerprints of your app's signing certificate.
+
+### web/res/apple-app-site-association
+- `apps`: The application identifiers for the apps that are available for use on this website.
 
 ## Run
     npm start

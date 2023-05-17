@@ -132,6 +132,7 @@
     var username
     var rscheme
     var token
+    var at
 
     function loadContent() {
       const queryString = window.location.search
@@ -144,6 +145,7 @@
       username = params.get("u")
       rscheme = params.get("r")
       token = params.get("t")
+      at = params.get("at")
       if (isEmpty(method) || isEmpty(rscheme) ||
           (method == METHOD_SIGN_UP && isEmpty(username)) ||
           (method == METHOD_REGISTER_KEY && isEmpty(token))) {
@@ -154,6 +156,7 @@
       console.log("username: " + username)
       console.log("rscheme: " + rscheme)
       console.log("token: " + token)
+      console.log("at: " + at)
 
       let content = document.getElementById("content")
       content.innerHTML = document.getElementById("auth_content").innerHTML
@@ -188,7 +191,7 @@
       let url = window.location.protocol + "//" + window.location.hostname
       url += isSignUp ? "/signup" : "/signin"
       url += "?u=" + encodeURIComponent(username)
-      if (isSignUp) { url += "&at=" + "platform"}
+      if (isSignUp && !isEmpty(at)) { url += "&at=" + at}
       let response = await fetch(url)
       response = await response.json()
       console.log(JSON.stringify(response))
@@ -243,7 +246,9 @@
     async function registerKey() {
       showLoadingIndicator()
       let url = window.location.protocol + "//" + window.location.hostname + "/registerkey"
-      url += "?at=" + "platform"
+      if (!isEmpty(at)) {
+        url += "?at=" + at
+      }
       let response = await fetch(url, {
         method: 'GET',
         headers: {'Authorization': 'Bearer ' + token},

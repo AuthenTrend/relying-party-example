@@ -24,12 +24,12 @@
     <label>&nbsp;&nbsp;|&nbsp;&nbsp;</label>
     <label id="signin_lbl" class="clickable" onclick="signIn()">Sign In</label>
     <br><br>
-    <label for="username">Username: </label><input id="username_ipt" type="text" name="username">
+    <label for="username">Username: </label><input id="username_ipt" type="email" name="username">
     <br><br>
     <input id="use_pw_checkbox" type="checkbox" name="use_password" onclick="checkUsingPassword()"><label for="use_password">Use password</label>
     <br><br>
     <div id="password_div" style="display:none">
-      <label for="password">Password: </label><input id="password_ipt" type="text" name="password">
+      <label for="password">Password: </label><input id="password_ipt" type="password" name="password">
       <br><br>
       <div id="two_fa_div" style="display:none">
         <input id="two_fa_checkbox" type="checkbox" name="two_fa" onclick="check2fa()"><label for="two_fa">2FA</label>
@@ -37,6 +37,8 @@
       </div>
     </div>
     <button id="login_btn" onclick="login()"></button>
+    <br><br>
+    <img src="bg.png">
   </div>
 
   <div id="loggedin_content" style="display:none">

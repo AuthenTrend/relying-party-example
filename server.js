@@ -275,6 +275,21 @@ app.get('/.well-known/apple-app-site-association', function (req, res) {
   })
 })
 
+app.get('/bg.png', function (req, res) {
+  console.log()
+  console.log(req.method, req.path)
+  console.log("Parameters: ", req.query)
+  console.log("User-Agent: ", req.header('User-Agent'))
+  console.log("IP: ", req.ip)
+
+  fs.readFile('./web/res/bg.png', function(err, content) {
+    if (err) { throw err }
+    res.writeHeader(200, {"Content-Type": "image/png"})
+    res.write(content)
+    res.end()
+  })
+})
+
 app.get('/signup', async function(req, res) {
   console.log()
   console.log(req.method, req.path)
@@ -311,6 +326,7 @@ app.get('/signup', async function(req, res) {
       resp = createFailureResponse(error.message)
     }
   }
+  console.log("Resp: ", resp)
   res.json(resp)
 })
 
@@ -377,6 +393,7 @@ app.post('/signup', async function(req, res) {
       resp = createFailureResponse(error.messsage)
     }
   }
+  console.log("Resp: ", resp)
   res.json(resp)
 })
 
@@ -419,6 +436,7 @@ app.get('/signin', async function(req, res) {
       resp = createFailureResponse(error.message)
     }
   }
+  console.log("Resp: ", resp)
   res.json(resp)
 })
 
@@ -484,6 +502,7 @@ app.post('/signin', async function(req, res) {
     let token = await generateSessionToken(username, req.ip, authfi_uid)
     resp = createSuccessResponse({token: token})
   }
+  console.log("Resp: ", resp)
   res.json(resp)
 })
 
@@ -518,6 +537,7 @@ app.get('/registerkey', async function(req, res) {
     console.log(error)
     resp = createFailureResponse(error.message)
   }
+  console.log("Resp: ", resp)
   res.json(resp)
 })
 
@@ -566,6 +586,7 @@ app.post('/registerkey', async function(req, res) {
     console.log(error);
     resp = createFailureResponse(error.messsage)
   }
+  console.log("Resp: ", resp)
   res.json(resp)
 })
 
@@ -585,6 +606,7 @@ app.get('/userinfo', async function(req, res) {
   else {
     resp = createSuccessResponse(userData)
   }
+  console.log("Resp: ", resp)
   res.json(resp)
 })
 
